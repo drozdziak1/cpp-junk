@@ -10,4 +10,5 @@ compile_commands.json
 CTestTestfile.cmake
 
 # Binaries
-cpp_junk
+letfreqs/letfreqs
+collatz/collatz
