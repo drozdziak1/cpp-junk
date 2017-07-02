@@ -5,7 +5,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	unordered_set<char> vowels = {'a', 'e', 'i', 'o', 'u', 'y'};
+	const unordered_set<char> vowels = {'a', 'e', 'i', 'o', 'u', 'y'};
 
 	unsigned vowel_count = 0;
 
@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 			++vowel_count;
 	}
 
-	cout << "Found " << vowel_count << " vowels";
+	cout << "Found " << vowel_count << " vowels" << endl;
 
 	return 0;
 }
