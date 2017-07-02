@@ -4,3 +4,4 @@ set (CMAKE_CXX_STANDARD 11)
 
 add_subdirectory(letfreqs)
 add_subdirectory(collatz)
+add_subdirectory(vowelcount)
