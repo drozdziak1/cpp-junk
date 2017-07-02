@@ -7,7 +7,7 @@
 using namespace std;
 
 struct FreqCmp {
-	bool operator()(auto &lhs, auto &rhs)
+	bool operator()(pair<char, int> &lhs, pair<char, int> &rhs)
 	{
 		return lhs.second < rhs.second;
 	}
