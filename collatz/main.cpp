@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
 			num = stoi(argv[1]);
 		} catch (...) {
 			cerr << "Couldn't parse your number, using 129" << endl;
+			num = 129;
 		}
 	}
 
