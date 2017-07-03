@@ -12,3 +12,4 @@ CTestTestfile.cmake
 # Binaries
 letfreqs/letfreqs
 collatz/collatz
+vowelcount/vowelcount
