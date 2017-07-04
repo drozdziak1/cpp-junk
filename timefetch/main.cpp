@@ -52,8 +52,9 @@ int main(int argc, char *argv[])
 	string address;
 
 	ntp_packet packet = {};
-	packet.vn = 3;
-	packet.mode = 3;
+
+	*( ( char * ) &packet + 0 ) = 0x1b; // Represents 27 in base 10 or 00011011 in base 2.
+
 
 	struct addrinfo *result, *resp_node;
 
