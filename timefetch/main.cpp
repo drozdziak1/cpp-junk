@@ -1,3 +1,11 @@
+/**
+ * A crude NTPv3 client implementation, inspired by David Lettier's ntpclient
+ * https://github.com/lettier/ntpclient
+ * http://www.lettier.com
+ *
+ * Author: Stanisław Drozd <drozdziak1 at gmail>
+ */
+
 #include <arpa/inet.h>
 
 #include <sys/socket.h>
@@ -7,56 +15,69 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <cstdio>
 #include <iostream>
+
+#define LEAP_NOWARN 0b00000000 // Leap indicator set to off
+#define NTP_V3      0b00011000 // NTP version 3
+#define NTP_MODE_3  0b00000011 // NTP mode 3 (the client mode)
+
+/**
+ * NTP's got it's own epoch in 1900-01-01 instead of 1970-01-01. The 70-year
+ * difference needs to be compensated manually
+ */
+#define NTP_TO_UNIX(ntp) (ntp) - 2208988800ULL
 
 extern "C" {
 	struct sockaddr_in;
 	struct addrinfo;
 
 	typedef struct {
+		/**
+		 * li_vn_mode - leap, version and mode byte starting from MSB
+		 *
+		 * li - 2 most significant bits
+		 * vn - 3 bits in the middle
+		 * mode - 3 least significant bits
+		 */
+		uint8_t li_vn_mode;
 
-		unsigned li   : 2;       // Only two bits. Leap indicator.
-		unsigned vn   : 3;       // Only three bits. Version number of the protocol.
-		unsigned mode : 3;       // Only three bits. Mode. Client will pick mode 3 for client.
+		uint8_t stratum;          // stratum level
+		uint8_t poll;             // maximum delay between server polls
+		uint8_t precision;        // clock precision
 
-		uint8_t stratum;         // Eight bits. Stratum level of the local clock.
-		uint8_t poll;            // Eight bits. Maximum interval between successive messages.
-		uint8_t precision;       // Eight bits. Precision of the local clock.
+		uint32_t root_delay;      // root delta
+		uint32_t root_dispersion; // root epsilon
+		uint32_t ref_id;          // clock reference type
 
-		uint32_t rootDelay;      // 32 bits. Total round trip delay time.
-		uint32_t rootDispersion; // 32 bits. Max error aloud from primary clock source.
-		uint32_t refId;          // 32 bits. Reference clock identifier.
+		uint32_t ref_sec;         // reference seconds
+		uint32_t ref_nsec;        // reference nanoseconds
 
-		uint32_t refTm_s;        // 32 bits. Reference time-stamp seconds.
-		uint32_t refTm_f;        // 32 bits. Reference time-stamp fraction of a second.
+		uint32_t orig_sec;        // originate seconds
+		uint32_t orig_nsec;       // originate nanoseconds
 
-		uint32_t origTm_s;       // 32 bits. Originate time-stamp seconds.
-		uint32_t origTm_f;       // 32 bits. Originate time-stamp fraction of a second.
+		uint32_t rx_sec;          // received seconds
+		uint32_t rx_nsec;         // received nanosecons
 
-		uint32_t rxTm_s;         // 32 bits. Received time-stamp seconds.
-		uint32_t rxTm_f;         // 32 bits. Received time-stamp fraction of a second.
+		uint32_t tx_sec;          // transmit seconds
+		uint32_t tx_nsec;         // transmit nanoseconds
 
-		uint32_t txTm_s;         // 32 bits and the most important field the client cares about. Transmit time-stamp seconds.
-		uint32_t txTm_f;         // 32 bits. Transmit time-stamp fraction of a second.
-
-	} ntp_packet;              // Total: 384 bits or 48 bytes.
+	} ntp_packet;
 };
-
-using namespace std;
 
 int main(int argc, char *argv[])
 {
 	int sockfd, retval = 0;
 	ssize_t sendto_retval, recv_retval;
+	time_t client_time, server_time;
 
-	string address;
+	std::string address;
 
 	ntp_packet packet = {};
 
-	*( ( char * ) &packet + 0 ) = 0x1b; // Represents 27 in base 10 or 00011011 in base 2.
+	packet.li_vn_mode = LEAP_NOWARN | NTP_V3 | NTP_MODE_3;
 
-
-	struct addrinfo *result, *resp_node;
+	struct addrinfo *result, *node;
 
 	struct addrinfo hints = {};
 	hints.ai_family = AF_UNSPEC; // IPv4 and v6 are allowed
@@ -64,60 +85,125 @@ int main(int argc, char *argv[])
 
 	if (argc != 2) {
 		address = "pool.ntp.org";
-		cerr << "Wrong number of arguments, using the default server "
-		     << '"' << address << '"' << endl;
+		std::cerr << "No server specified, using the default server "
+		          << '"' << address << '"' << std::endl;
 	} else {
 		address = argv[1];
 	}
 
 	if (int e = getaddrinfo(address.c_str(), "123", &hints, &result)) {
-		cerr << "getaddrinfo() failed with" << e << endl;
+		std::cerr << "getaddrinfo() failed with " << e << '\n'
+		          << '"' << gai_strerror(e) << '"' << std::endl;
 		exit(1);
 	}
 
-	for (resp_node = result; resp_node != nullptr; resp_node = resp_node->ai_next) {
-		sockfd = socket(resp_node->ai_family, resp_node->ai_socktype, resp_node->ai_protocol);
+	for (node = result; node != nullptr; node = node->ai_next) {
+		sockfd = socket(
+		             node->ai_family,
+		             node->ai_socktype,
+		             node->ai_protocol
+		         );
 
 		if (sockfd == -1)
 			continue;
 
-		if (connect(sockfd, resp_node->ai_addr, resp_node->ai_addrlen) == 0)
+		if (connect(sockfd, node->ai_addr, node->ai_addrlen) == 0)
 			break;
 
 		close(sockfd);
 	}
 
-	if (resp_node == nullptr) {
-		cerr << "Could not connect() to any of the results" << endl;
+	if (node == nullptr) {
+		std::cerr << "Could not connect() to any of the results"
+		          << std::endl;
 		exit(1);
 	}
 
-	struct sockaddr_in *addr = (sockaddr_in *)resp_node->ai_addr;
-	cout << "Connected to " << inet_ntoa(addr->sin_addr) << endl;
+	struct sockaddr_in *addr = (sockaddr_in *)node->ai_addr;
+	std::cout << "Connected to " << inet_ntoa(addr->sin_addr) << std::endl;
+
+	putchar('\n');
 
 	sendto_retval = send(sockfd, &packet, sizeof(packet), 0);
 	if (sendto_retval != -1) {
-		cout << "Successfuly sent " << sendto_retval << " bytes"
-		     << endl;
+		std::cout << "Successfuly sent " << sendto_retval << " bytes"
+		          << std::endl;
 	} else {
-		cerr << "Failed to send the NTP packet" << endl;
-		cerr << "Errno: " << gai_strerror(errno) << endl;
+		std::cerr << "Failed to send the NTP packet\n"
+		          << '"' << gai_strerror(errno) << '"' << std::endl;
 		retval = 1;
 		goto fini;
 	}
 
 	recv_retval = recv(sockfd, &packet, sizeof(packet), 0);
 	if (recv_retval != -1) {
-		cout << "Successfuly received " << recv_retval << " bytes"
-		     << endl;
+		std::cout << "Successfuly received " << recv_retval << " bytes"
+		          << std::endl;
 	} else {
-		cerr << "Failed to receive the NTP packet" << endl;
+		std::cerr << "Failed to receive the NTP packet\n"
+		          << '"' << gai_strerror(errno) << '"' << std::endl;
 		retval = 1;
 		goto fini;
 	}
 
+	putchar('\n');
+
+	client_time = time(NULL);
+	server_time = NTP_TO_UNIX(ntohl(packet.tx_sec));
+
+	std::cout << "Client time: " << ctime(&client_time)
+	          << "Server time: " << ctime(&server_time) << std::endl;
+
+	if (int lag = abs(server_time - client_time)) {
+		std::cout << "Client is " << lag << "seconds off" << '\n'
+		          << std::endl;
+	}
+
+	printf(
+	    "Response packet details (timestamps in NTP epoch):\n"
+	    "Leap Indicator:\t\t0x%02X\n"
+	    "NTP Version:\t\t0x%02X\n"
+	    "NTP Mode:\t\t0x%02X\n"
+	    "\n"
+	    "Stratum:\t\t%u\n"
+	    "Polling Interval:\t%u\n"
+	    "Clock precision:\t%u\n"
+	    "Root Delay:\t\t%lu\n"
+	    "Root Dispersion:\t%lu\n"
+	    "\n"
+	    "Reference ID:\t\t%lu\n"
+	    "Reference seconds:\t%lu\n"
+	    "Reference nanoseconds:\t%lu\n"
+	    "\n"
+	    "Origin seconds:\t\t%lu\n"
+	    "Origin nanoseconds:\t%lu\n"
+	    "\n"
+	    "Receive seconds:\t%lu\n"
+	    "Receive nanoseconds:\t%lu\n"
+	    "\n"
+	    "Transmit seconds:\t%lu\n"
+	    "Transmit nanoseconds:\t%lu\n",
+	    packet.li_vn_mode >> 6,
+	    (packet.li_vn_mode >> 3) % 8,
+	    packet.li_vn_mode % 8,
+	    packet.stratum,
+	    packet.poll,
+	    packet.precision,
+	    ntohl(packet.root_delay),
+	    ntohl(packet.root_dispersion),
+	    ntohl(packet.ref_id),
+	    ntohl(packet.ref_sec),
+	    ntohl(packet.ref_nsec),
+	    ntohl(packet.orig_sec),
+	    ntohl(packet.orig_nsec),
+	    ntohl(packet.rx_sec),
+	    ntohl(packet.rx_nsec),
+	    ntohl(packet.tx_sec),
+	    ntohl(packet.tx_nsec)
+	);
+
+
 fini:
 	close(sockfd);
-
 	return retval;
 }
