@@ -14,3 +14,6 @@ letfreqs/letfreqs
 collatz/collatz
 vowelcount/vowelcount
 timefetch/timefetch
+
+chat/client/chatclient
+chat/server/chatserv
