@@ -4,24 +4,36 @@
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-void print(const boost::system::error_code &e, boost::asio::deadline_timer& t, int& count)
+void print(const boost::system::error_code &e, boost::asio::deadline_timer *t, int *count)
 {
-	std::cout << "A timer thing No. " << count++ << std::endl;
+	if (*count < 5) {
+		std::cout << "A timer thing No. " << (*count)++ << std::endl;
+		t->expires_at(t->expires_at() + boost::posix_time::seconds(1));
+		t->async_wait(boost::bind(
+		                  print,
+		                  boost::asio::placeholders::error,
+		                  t,
+		                  count
+		              ));
+	}
 }
 
 int main(int argc, char *argv[])
 {
 	boost::asio::io_service io;
 
-	boost::asio::deadline_timer t1(io, boost::posix_time::seconds(1));
-	boost::asio::deadline_timer t2(io, boost::posix_time::seconds(2));
-	t1.async_wait(&print);
-	std::cout << "Between" << std::endl;
-	t2.async_wait(&print);
-
-	io.run();
+	int count = 0;
+	boost::asio::deadline_timer t(io, boost::posix_time::seconds(1));
+	t.async_wait(boost::bind(
+	                 print,
+	                 boost::asio::placeholders::error,
+	                 &t,
+	                 &count
+	             ));
 
 	std::cout << "Meantime stuff" << std::endl;
+	io.run();
+
 
 	return 0;
 }
