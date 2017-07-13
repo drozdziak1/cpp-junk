@@ -1,4 +1,4 @@
-find_package(Boost 1.58.0 REQUIRED COMPONENTS system regex)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS system regex thread)
 
 add_executable(chatserv main.cpp)
 
