@@ -18,8 +18,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	g->set_field(0, 3, Game::Field::PlayerTwo);
 	g->redraw();
+
+	while (!g->has_ended) {
+		g->step();
+	}
 
 	delete g;
 
