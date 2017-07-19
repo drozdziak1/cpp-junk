@@ -32,10 +32,13 @@ Game::Game(int width, int height, int winlen)
 	               (win_height_ - brd_win_height_) / 2, (win_width_ - brd_win_width_) / 2
 	           );
 
-	// Clear the board out
+	// Clear the board
 	std::fill(brd_data_.begin(), brd_data_.end(), Field::Free);
 
+	// Enable KEY_* macros in getch()
 	keypad(brd_win_, true);
+
+	// Hide the cursor and user input
 	noecho();
 	curs_set(0);
 
@@ -212,6 +215,12 @@ bool Game::check_for_win()
 	int top_right = 0, right = 0, bottom_right = 0;
 	int top = 0, bottom = 0;
 
+	/**
+	 * Each loop goes in a straight line away from the last move in every
+	 * direction. Each one stops once it finds anything different than the
+	 * current player's piece, or if an edge of the board is reached.
+	 */
+
 	// top
 	for (int i = 1; i < winning_length; ++i) {
 		if (
@@ -312,14 +321,14 @@ bool Game::check_for_win()
 		}
 	}
 
-	if (
-	    top + bottom + 1 >= winning_length
-	    || top_right + bottom_left + 1 >= winning_length
-	    || right + left + 1 >= winning_length
-	    || bottom_right + top_left + 1 >= winning_length
-	) {
-		return true;
-	} else {
-		return false;
-	}
+	/**
+	 * The current player is a winner if we've counted at least
+	 * winning_length fields from any two opposite
+	 * directions; the "+ 1" bit accounts
+	 * for the last move itself
+	 */
+	return top + bottom + 1 >= winning_length
+	       || top_right + bottom_left + 1 >= winning_length
+	       || right + left + 1 >= winning_length
+	       || bottom_right + top_left + 1 >= winning_length;
 }
