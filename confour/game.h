@@ -46,7 +46,7 @@ public:
 	/**
 	 * last_x, last_y - where's the last move?
 	 */
-	int last_x, last_y;
+	int last_x = -1, last_y = -1;
 
 	/**
 	 * Prepares a board of the specified dimensions and winning length
