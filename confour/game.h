@@ -51,12 +51,17 @@ public:
 	/**
 	 * Prepares a board of the specified dimensions and winning length
 	 */
-	Game(int height, int width, int winlen = 4);
+	Game(int width, int height, int winlen = 4);
 
 	/**
 	 * Prepares a square board
 	 */
 	Game(int size) : Game(size, size) {}
+
+	/**
+	 * Prepares a classic 7x6 board
+	 */
+	Game() : Game(7, 6) {}
 
 	~Game();
 

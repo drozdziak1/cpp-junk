@@ -7,6 +7,9 @@ int main(int argc, char *argv[])
 {
 	Game *g;
 	switch (argc) {
+	case 1:
+		g = new Game();
+		break;
 	case 2:
 		g = new Game(std::stoi(argv[1]));
 		break;
