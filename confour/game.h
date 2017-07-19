@@ -78,9 +78,9 @@ public:
 	bool move();
 
 	/**
-	 * check_for_win() - ends the game if the current player won
+	 * check_for_win() - Checks if the current player has won
 	 */
-	void check_for_win();
+	bool check_for_win();
 
 	/**
 	 * get_field() - retrieves a Field value from brd_data_

@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <string>
 #include <vector>
 
 #include <ncurses.h>
@@ -17,6 +18,9 @@ Game::Game(int width, int height, int winlen)
 	  winning_length(winlen)
 {
 	initscr();
+	start_color();
+	use_default_colors();
+
 	win_ = stdscr;
 
 	getmaxyx(win_, win_height_, win_width_);
@@ -53,11 +57,21 @@ Game::~Game()
 int Game::redraw()
 {
 	int retval;
+
+	init_pair(1, COLOR_BLUE, -1);
+	init_pair(2, COLOR_YELLOW, -1);
+
 	for (int x = 0; x < brd_width_; ++x) {
 		for (int y = 0; y < brd_height_; ++y) {
 
-			if (x == brd_col_selected_)
+			if (x == brd_col_selected_) {
 				wattron(brd_win_, A_STANDOUT);
+				wattron(brd_win_, COLOR_PAIR(1));
+			}
+
+			if (x == last_x && y == last_y)
+				wattron(brd_win_, COLOR_PAIR(2));
+
 
 			retval = mvwprintw(
 			             brd_win_,
@@ -67,6 +81,7 @@ int Game::redraw()
 			             static_cast<char>(get_field(x, y))
 			         );
 			wattroff(brd_win_, A_STANDOUT);
+			wattroff(brd_win_, COLOR_PAIR(1));
 			if (retval == ERR) {
 				return retval;
 			}
@@ -97,7 +112,9 @@ int Game::redraw()
 	}
 
 	wattroff(brd_win_, A_STANDOUT);
+
 	wrefresh(win_);
+	wrefresh(brd_win_);
 
 	return retval;
 }
@@ -105,6 +122,7 @@ int Game::redraw()
 void Game::step()
 {
 	int c = wgetch(brd_win_);
+	std::string winner_msg;
 
 	switch (c) {
 
@@ -119,25 +137,55 @@ void Game::step()
 		break;
 
 	case KEY_ENTER:
+	case ' ':
 	case 10: // Regular newline
 		if (move()) {
-			check_for_win();
+			// If the move was successful, check if they won
+			if (check_for_win()) {
 
-			if (current_player == Field::PlayerOne)
-				current_player = Field::PlayerTwo;
-			else
-				current_player = Field::PlayerOne;
+				has_ended = true;
 
+				winner_msg = (current_player == Field::PlayerOne) ?
+				             "Player One wins" : "Player Two wins";
+
+				wattron(win_, A_BLINK);
+				mvwprintw(
+				    win_,
+				    win_height_ - 1,
+				    (win_width_ - winner_msg.size()) / 2,
+				    winner_msg.c_str()
+				);
+				wattroff(win_, A_BLINK);
+
+			} else {
+				current_player = (current_player == Field::PlayerOne) ?
+				                 Field::PlayerTwo : Field::PlayerOne;
+			}
+		} else {
+			int x;
+			for (x = 0; x < brd_width_; ++x) {
+				if (get_field(x, 0) == Field::Free)
+					break;
+			}
+
+			if (x == brd_width_) {
+				mvwprintw( win_, 0, 0, "We're out of space!");
+			}
 		}
 		break;
 
 	case 'q':
 	case 'Q':
 		has_ended = true;
-		return;
+		break;
 
 	default:
-		mvprintw(0, 0, "Unknown key: %c %d", c, c);
+		mvwprintw(
+		    win_,
+		    0,
+		    0,
+		    "Unknown key: %c %d", c, c
+		);
 	}
 
 	redraw();
@@ -157,9 +205,121 @@ bool Game::move()
 	return false;
 }
 
-void Game::check_for_win()
+bool Game::check_for_win()
 {
-	for (int offset = winning_length - 1; offset > 0; --offset) {
-		// TODO: write the winner detection logic
+
+	int top_left = 0, left =  0, bottom_left = 0;
+	int top_right = 0, right = 0, bottom_right = 0;
+	int top = 0, bottom = 0;
+
+	// top
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_y - i >= 0
+		    && get_field(last_x, last_y - i) == current_player
+		) {
+			++top;
+		} else {
+			break;
+		}
+	}
+
+	// top_right
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_x + i <= brd_width_
+		    && last_y - i >= 0
+		    && get_field(last_x + i, last_y - i) == current_player
+		) {
+			++top_right;
+		} else {
+			break;
+		}
+	}
+
+	// right
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_x + i <= brd_width_
+		    && get_field(last_x + i, last_y) == current_player
+		) {
+			++right;
+		} else {
+			break;
+		}
+	}
+
+	// bottom_right
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_x + i <= brd_width_
+		    && last_y + i <= brd_height_
+		    && get_field(last_x + i, last_y + i) == current_player
+		) {
+			++bottom_right;
+		} else {
+			break;
+		}
+	}
+
+	// bottom
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_y + i <= brd_height_
+		    && get_field(last_x, last_y + i) == current_player
+		) {
+			++bottom;
+		} else {
+			break;
+		}
+	}
+
+	// bottom_left
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_x - i >= 0
+		    && last_y + i <= brd_height_
+		    && get_field(last_x - i, last_y + i) == current_player
+		) {
+			++bottom_left;
+		} else {
+			break;
+		}
+	}
+
+	// left
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_x - i >= 0
+		    && get_field(last_x - i, last_y) == current_player
+		) {
+			++left;
+		} else {
+			break;
+		}
+	}
+
+	// top_left
+	for (int i = 1; i < winning_length; ++i) {
+		if (
+		    last_x - i >= 0
+		    && last_y - i >= 0
+		    && get_field(last_x - i, last_y - i) == current_player
+		) {
+			++top_left;
+		} else {
+			break;
+		}
+	}
+
+	if (
+	    top + bottom + 1 >= winning_length
+	    || top_right + bottom_left + 1 >= winning_length
+	    || right + left + 1 >= winning_length
+	    || bottom_right + top_left + 1 >= winning_length
+	) {
+		return true;
+	} else {
+		return false;
 	}
 }

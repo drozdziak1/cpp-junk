@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
 	while (!g->has_ended) {
 		g->step();
 	}
+	getch();
 
 	delete g;
 
