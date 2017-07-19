@@ -13,8 +13,17 @@ int main(int argc, char *argv[])
 	case 3:
 		g = new Game(std::stoi(argv[1]), std::stoi(argv[2]));
 		break;
+
+	case 4:
+		g = new Game(
+		    std::stoi(argv[1]),
+		    std::stoi(argv[2]),
+		    std::stoi(argv[3])
+		);
+		break;
 	default:
-		std::cerr << "Usage: " << argv[0] << " X [Y]" << std::endl;
+		std::cerr << "Usage: " << argv[0] << " X [Y [winning_length]]"
+		          << std::endl;
 		exit(1);
 	}
 
