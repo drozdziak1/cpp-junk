@@ -32,6 +32,11 @@ Game::Game(int width, int height, int winlen)
 	               (win_height_ - brd_win_height_) / 2, (win_width_ - brd_win_width_) / 2
 	           );
 
+	// Place the message box right above the board
+	msg_win_ = subwin(win_,
+	                  msg_height_, msg_width_,
+	                  win_height_ - 1, (win_width_ - msg_width_) / 2);
+
 	// Clear the board
 	std::fill(brd_data_.begin(), brd_data_.end(), Field::Free);
 
@@ -59,11 +64,15 @@ Game::~Game()
 
 int Game::redraw()
 {
-	int retval;
+	int retval = OK;
 
 	init_pair(1, COLOR_BLUE, -1);
 	init_pair(2, COLOR_YELLOW, -1);
 
+	/**
+	 * Draw the board, paint the chosen column
+	 * blue and the last move yellow
+	 */
 	for (int x = 0; x < brd_width_; ++x) {
 		for (int y = 0; y < brd_height_; ++y) {
 
@@ -83,16 +92,19 @@ int Game::redraw()
 			             "%c",
 			             static_cast<char>(get_field(x, y))
 			         );
+
 			wattroff(brd_win_, A_STANDOUT);
 			wattroff(brd_win_, COLOR_PAIR(1));
-			if (retval == ERR) {
+			wattroff(brd_win_, COLOR_PAIR(2));
+
+			if (retval == ERR)
 				return retval;
-			}
 		}
 	}
 
 	wattron(win_, A_STANDOUT);
 
+	// Show whose turn it is
 	switch (current_player) {
 
 	case Field::PlayerOne:
@@ -116,8 +128,25 @@ int Game::redraw()
 
 	wattroff(brd_win_, A_STANDOUT);
 
+	if (retval == ERR)
+		return retval;
+
+	// Truncate the message to fit the box
+	if (msg.size() > msg_width_)
+		msg.resize(msg_width_);
+
+	wattron(msg_win_, A_STANDOUT);
+	retval = mvwprintw(
+	             msg_win_,
+	             0,
+	             (msg_width_ - msg.size()) / 2,
+	             msg.c_str()
+	         );
+	wattroff(msg_win_, A_STANDOUT);
+
 	wrefresh(win_);
 	wrefresh(brd_win_);
+	wrefresh(msg_win_);
 
 	return retval;
 }
@@ -148,23 +177,15 @@ void Game::step()
 
 				has_ended = true;
 
-				winner_msg = (current_player == Field::PlayerOne) ?
-				             "Player One wins" : "Player Two wins";
-
-				wattron(win_, A_BLINK);
-				mvwprintw(
-				    win_,
-				    win_height_ - 1,
-				    (win_width_ - winner_msg.size()) / 2,
-				    winner_msg.c_str()
-				);
-				wattroff(win_, A_BLINK);
+				msg = (current_player == Field::PlayerOne) ?
+				      "Player One wins" : "Player Two wins";
 
 			} else {
 				current_player = (current_player == Field::PlayerOne) ?
 				                 Field::PlayerTwo : Field::PlayerOne;
 			}
 		} else {
+			// Check if there are any free fields in the top row
 			int x;
 			for (x = 0; x < brd_width_; ++x) {
 				if (get_field(x, 0) == Field::Free)
@@ -172,7 +193,7 @@ void Game::step()
 			}
 
 			if (x == brd_width_) {
-				mvwprintw( win_, 0, 0, "We're out of space!");
+				msg = "No space left on the board";
 			}
 		}
 		break;
@@ -183,12 +204,7 @@ void Game::step()
 		break;
 
 	default:
-		mvwprintw(
-		    win_,
-		    0,
-		    0,
-		    "Unknown key: %c %d", c, c
-		);
+		msg = "Unknown key";
 	}
 
 	redraw();

@@ -1,6 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include <string>
 #include <vector>
 
 #include <ncurses.h>
@@ -9,6 +10,9 @@
  * A "connect four" game model
  *
  * Note: Coordinates start at top-left and are zero-indexed
+ *
+ * TODO:
+ * - A legend
  */
 class Game
 {
@@ -31,7 +35,8 @@ public:
 	const static int h_spacing = 4;
 	const static int v_spacing = 2;
 
-	bool has_ended;
+	bool has_ended = false;
+	std::string msg = ""; // The message box buffer
 
 	/**
 	 * winning_length - how many fields does the winning line take?
@@ -119,14 +124,14 @@ public:
 
 private:
 	/**
-	 * Actual board dimensions
+	 * Game window dimensions
 	 */
-	int brd_width_, brd_height_;
+	int win_width_, win_height_;
 
 	/**
-	 * brd_data_ - holds the underlying Field values
+	 * win_ - the ncurses window for the whole game
 	 */
-	std::vector<Field> brd_data_; // Board state values
+	WINDOW *win_;
 
 	/**
 	 * Board dimensions with spacing applied (a.k.a. ncurses board window
@@ -140,14 +145,24 @@ private:
 	WINDOW *brd_win_;
 
 	/**
-	 * Game window dimensions
+	 * Actual board dimensions
 	 */
-	int win_width_, win_height_;
+	int brd_width_, brd_height_;
 
 	/**
-	 * win_ - the ncurses window for the whole game
+	 * brd_data_ - holds the underlying Field values
 	 */
-	WINDOW *win_;
+	std::vector<Field> brd_data_; // Board state values
+
+	/**
+	 * Message box dimensions
+	 */
+	int msg_width_ = 50, msg_height_ = 1;
+
+	/**
+	 * Message box ncurses window
+	 */
+	WINDOW *msg_win_;
 
 	/**
 	 * brd_col_selected_ - the column chosen by the current player
