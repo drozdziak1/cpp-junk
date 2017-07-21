@@ -1,0 +1,10 @@
+find_path(LIBDL_INCLUDE_DIR NAMES dlfcn.h)
+find_library(LIBDL_LIBRARIES NAMES dl libdl ltdl libltdl)
+
+message(STATUS "Found LibDL: " ${LIBDL_LIBRARIES})
+
+include(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibDL DEFAULT_MSG LIBDL_INCLUDE_DIR
+  LIBDL_LIBRARIES)
+
+mark_as_advanced(LIBDL_INCLUDE_DIR LIBDL_LIBRARIES)
