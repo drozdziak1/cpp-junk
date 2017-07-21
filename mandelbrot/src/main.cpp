@@ -10,6 +10,12 @@ void window_resize(GLFWwindow *window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
+void handle_input(GLFWwindow *window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+}
+
 int main(int argc, char *argv[])
 {
 	glfwInit();
@@ -43,6 +49,8 @@ int main(int argc, char *argv[])
 
 	while (!glfwWindowShouldClose(window))
 	{
+		handle_input(window);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
