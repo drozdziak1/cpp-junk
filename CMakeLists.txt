@@ -1,12 +1,15 @@
 cmake_minimum_required (VERSION 3.1)
 project (CppJunk)
 set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/")
 
-add_subdirectory(bigfac)
-add_subdirectory(chat)
-add_subdirectory(collatz)
-add_subdirectory(confour)
-add_subdirectory(letfreqs)
-add_subdirectory(mandelbrot)
-add_subdirectory(timefetch)
-add_subdirectory(vowelcount)
+subdirs(
+bigfac
+chat
+collatz
+confour
+letfreqs
+mandelbrot
+timefetch
+vowelcount
+)

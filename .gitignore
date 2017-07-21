@@ -9,13 +9,5 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 
-# Binaries
-bigfac/bigfac
-chat/client/chatclient
-chat/server/chatserv
-collatz/collatz
-confour/confour
-letfreqs/letfreqs
-mandelbrot/mandelbrot
-timefetch/timefetch
-vowelcount/vowelcount
+# Output
+bin/
