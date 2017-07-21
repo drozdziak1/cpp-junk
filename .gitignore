@@ -10,14 +10,12 @@ compile_commands.json
 CTestTestfile.cmake
 
 # Binaries
-letfreqs/letfreqs
-collatz/collatz
-vowelcount/vowelcount
-timefetch/timefetch
-
+bigfac/bigfac
 chat/client/chatclient
 chat/server/chatserv
-
+collatz/collatz
 confour/confour
-
-bigfac/bigfac
+letfreqs/letfreqs
+mandelbrot/mandelbrot
+timefetch/timefetch
+vowelcount/vowelcount
