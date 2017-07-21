@@ -2,18 +2,42 @@
 
 #include <GLFW/glfw3.h>
 
+#include <cmath>
 #include <iostream>
 #include <memory>
+
+static float r, g, b, a;
 
 void window_resize(GLFWwindow *window, int width, int height)
 {
 	glViewport(0, 0, width, height);
 }
 
-void handle_input(GLFWwindow *window)
+void handle_input(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+	if (!(action == GLFW_PRESS || action == GLFW_REPEAT))
+		return;
+
+	switch (key) {
+	case GLFW_KEY_ESCAPE:
 		glfwSetWindowShouldClose(window, true);
+		break;
+	case GLFW_KEY_LEFT:
+		r = fmod(r + 0.1f, 1.1f);
+		break;
+	case GLFW_KEY_DOWN:
+		g = fmod(g + 0.1f, 1.1f);
+		break;
+	case GLFW_KEY_RIGHT:
+		b = fmod(b + 0.1f, 1.1f);
+		break;
+	case GLFW_KEY_UP:
+		a = fmod(a + 0.1f, 1.1f);
+	default:
+		std::cerr << "Don't know that key!" << std::endl;
+	}
+	std::cout << "r: " << r << " g: " << g << " b: " << b << " a: " << a
+	          << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -46,14 +70,17 @@ int main(int argc, char *argv[])
 	glViewport(0, 0, 800, 600);
 
 	glfwSetFramebufferSizeCallback(window, window_resize);
+	glfwSetKeyCallback(window, handle_input);
 
-	while (!glfwWindowShouldClose(window))
-	{
-		handle_input(window);
+	while (!glfwWindowShouldClose(window)) {
+		glClearColor(r, g, b, a);
+		glClear(GL_COLOR_BUFFER_BIT);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+
+	std::cout << "Bye!" << std::endl;
 
 	glfwTerminate();
 	return 0;
