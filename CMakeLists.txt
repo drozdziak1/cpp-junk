@@ -10,6 +10,7 @@ collatz
 confour
 letfreqs
 mandelbrot
+segtree
 timefetch
 vowelcount
 )
