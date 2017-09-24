@@ -8,6 +8,7 @@ bigfac
 chat
 collatz
 confour
+galeshapely
 letfreqs
 mandelbrot
 rabinkarp
