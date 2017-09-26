@@ -21,32 +21,31 @@ GSItem::GSItem(std::vector<GSItem *> new_prefs) :
 
 bool GSItem::eval_proposer(GSItem &proposer)
 {
+	std::cout << proposer.name << " proposes to " << name;
+
 	// tfw no bf
 	if (!spouse) {
 		spouse = &proposer;
 		proposer.spouse = this;
-		std::cout << name << "'s first proposal from "
-		          << proposer.name << ", accepting..."
-		          << std::endl;
+		std::cout << ", FIRST PROPOSER ACCEPTED" << std::endl;
 		return true;
 	}
 
+	// Obtain proposer and spouse positions for comparison
 	auto proposer_iter = std::find(prefs.begin(), prefs.end(), &proposer);
 	auto spouse_iter = std::find(prefs.begin(), prefs.end(), spouse);
 
-	std::cout << "Proposer " << proposer.name << " found in " << name
-	          << " at " << proposer_iter - prefs.begin() << std::endl;
-
 	if (proposer_iter < spouse_iter) {
 
-		std::cout << "Spouse swap in " << name << " from "
-		          << spouse->name << " to " << proposer.name
+		std::cout << " and is better than "
+		          << spouse->name << ", SWAP ACCEPTED"
 		          << std::endl;
 
 		// Unburden our ex
 		spouse->spouse = nullptr;
-		auto self_iter = std::find(spouse->prefs.begin(), spouse->prefs.end(), this);
-		spouse->prefs.erase(self_iter, self_iter + 1);
+
+		// The man is devastated (also, now we know how many prefs to ommit)
+		++spouse->failures;
 
 		// Give the new guy our number
 		proposer.spouse = this;
@@ -57,11 +56,15 @@ bool GSItem::eval_proposer(GSItem &proposer)
 		return true;
 	}
 
-	auto self_iter = std::find(proposer.prefs.begin(), proposer.prefs.end(), this);
-	proposer.prefs.erase(self_iter, self_iter + 1);
-
-	std::cout << proposer.name << " rejected by " << name << " in favor of "
+	std::cout << " and is REJECTED in favor of "
 	          << spouse->name << std::endl;
+
+	 /*
+	  * Proposer is not good enough, he won't get
+	  * anywhere near her anytime soon (again,
+	  * this helps with redundant proposals).
+	  */
+	++proposer.failures;
 
 	return false;
 }

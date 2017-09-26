@@ -11,6 +11,7 @@ struct GSItem
 
 	std::string name;
 	std::vector<GSItem *> prefs;
+	int failures = 0;
 
 	GSItem *spouse = nullptr;
 
@@ -21,6 +22,10 @@ struct GSItem
 		name(name),
 		prefs(new_prefs) {};
 
+	/**
+	 * eval_proposer - takes proposer and makes them this->spouse
+	 * if they're good enough.
+	 */
 	bool eval_proposer(GSItem& proposer);
 
 	friend std::ostream &operator<<(std::ostream &os, GSItem &item)
@@ -31,11 +36,11 @@ struct GSItem
 		}
 
 		if (item.spouse)
-			preflist += " with spouse " + item.spouse->name;
+			preflist += "with spouse " + item.spouse->name + ' ';
 		else
-			preflist += "with no spouse";
+			preflist += "with no spouse ";
 
-		return os << preflist;
+		return os << preflist << '(' << item.failures << " failures)";
 	}
 };
 #endif /* ifndef GSITEM */
